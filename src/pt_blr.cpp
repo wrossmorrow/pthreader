@@ -95,7 +95,7 @@ int pt_blr_evaluation( int n , void * data , void * in , void * out )
 
 int main( int argc , char * argv[] ) 
 {
-	// read T, K, and const from CL args
+	// read T, N, K, and const from CL args
 
 	if( argc < 5 ) {
 		printf( "\"%s\" expects four arguments: Number of Threads, Number of Observations, Number of Features, and Constant (yes/no)\n" , argv[0] );
@@ -131,6 +131,7 @@ int main( int argc , char * argv[] )
 	// create a new pthreader object with the number of threads
 	pthreader * PT = new pthreader( params.Nthrd );
 
+	// print out what is happening during setup
 	PT->be_verbose();
 
 	// define what to do
@@ -146,8 +147,10 @@ int main( int argc , char * argv[] )
 	double * s = ( double * )malloc( params.Nthrd * sizeof( double ) );
 	double S = 0.0;
 
+	// be quiet for the evaluations
 	PT->be_quiet();
 
+	// do several evaluations, to show calls can be repeated
 	for( int iter = 0 ; iter < 10 ; iter++ ) {
 
 		for( int i = 0 ; i < params.Nvars ; i++ ) { x[i] = 2.0 * urand() - 1.0; }
@@ -164,6 +167,7 @@ int main( int argc , char * argv[] )
 	free( x );
 	free( s );
 
+	// print out what is happening again
 	PT->be_verbose();
 
 	// close the threads
