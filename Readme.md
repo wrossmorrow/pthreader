@@ -9,3 +9,7 @@ Two dependency-less examples, modeled after Ordinary Least Squares and Binary Lo
 Surely you can still do bad things with `pthreader`, like issueing conflicting writes to shared locations in memory from different threads. `pthreader` can handle thread safety in signalling that work is available and work is done, but not any application-specific thread safety concerns. A generic package can probably either be lightweight _or_ safe, but not both. 
 
 If each thread sets its own data structures up in memory -- a good thing to do for efficient memory allocation reasons alone -- this is probably not a concern. Nor is it a concern should different threads want to read the same data. `pthreader` should probably be seen as a helper for doing embarassingly parallel evaluations in which subsets of a calculation don't interact at all. 
+
+# Contact
+
+[W. Ross Morrow](wrossmorrow@stanford.edu)
