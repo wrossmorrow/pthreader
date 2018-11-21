@@ -14,7 +14,7 @@ all: ols blr
 
 pthreader: 
 
-	$(CPP) -c $(SRC_DIR)/pthreader.cpp -o $(OBJ_DIR)/pthreader.o
+	$(CPP) $(CFLAGS) -c $(SRC_DIR)/pthreader.cpp -o $(OBJ_DIR)/pthreader.o
 
 ols: pthreader
 
