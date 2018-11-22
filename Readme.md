@@ -14,7 +14,11 @@ This doesn't build into a library, but you can make an object file with `make pt
 
 # Examples
 
-Two dependency-less examples, modeled after Ordinary Least Squares and Binary Logistic Regression, are provided in `examples`. You can create them both with `make examples` or separately with `make ols` or `make blr`. The executables are put into `bin`. 
+Two dependency-less examples, modeled after Ordinary Least Squares and Binary Logistic Regression, are provided in `examples`. You can create them both with `make examples` or separately with `make ols` or `make blr`. The executables are put into `bin`. After building, you can run with commands like
+```
+./bin/pt_ols 4 10 3 1
+```
+This would run OLS sum of squares evaluations using a total of 4 threads for data with 10 observations, 3 features and a model including a constant term. Data is generated for this example in the example code. 
 
 # Contact
 
