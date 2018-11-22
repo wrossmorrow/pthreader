@@ -1,4 +1,8 @@
 
+.SHELL  := bash
+
+CONFIG  := mkdir -p bin obj
+
 OBJ_DIR := obj
 SRC_DIR := src
 EXE_DIR := bin
@@ -14,11 +18,11 @@ LIBS := -lpthread -lm
 
 all: pthreader examples
 
-pthreader: 
+pthreader: env
 
 	$(CPP) $(CFLAGS) -c $(SRC_DIR)/pthreader.cpp -o $(OBJ_DIR)/pthreader.o
 
-examples: ols blr
+examples: env ols blr
 
 ols: pthreader
 
@@ -29,6 +33,10 @@ blr: pthreader
 
 	$(CPP) $(CFLAGS) -c $(EXM_DIR)/pt_blr.cpp -o $(OBJ_DIR)/pt_blr.o
 	$(CPP) -o $(EXE_DIR)/pt_blr $(OBJ_DIR)/pthreader.o $(OBJ_DIR)/pt_blr.o $(LIBS)
+
+env: 
+
+	$(CONFIG)
 
 clean: 
 
