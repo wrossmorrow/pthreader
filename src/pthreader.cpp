@@ -229,6 +229,102 @@ void pthreader::set_cleanup( pthreader_free_fcn f )
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * 
+ * STATUS
+ * 
+ * get status flags
+ * 
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+int pthreader::get_eval_status( int n )
+{
+	if( threads_open ) { return statflag[n]; }
+	else { return 0; }
+}
+
+int pthreader::get_all_status_zero() 
+{ 
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ALL_ZERO
+	return all_status_zero; 
+#else
+	int flag = 1;
+	for( int t = 0 ; t < n_threads ; t++ ) {
+		if( statflag[t] != 0 ) { return 0; }
+	}
+	return flag;
+#endif
+}
+
+int pthreader::get_all_status_positive() 
+{ 
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ALL_POS
+	return all_status_pos; 
+#else
+	int flag = 1;
+	for( int t = 0 ; t < n_threads ; t++ ) {
+		if( statflag[t] <= 0 ) { return 0; }
+	}
+	return flag;
+#endif
+}
+
+int pthreader::get_all_status_negative() 
+{ 
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ALL_NEG
+	return all_status_neg; 
+#else
+	int flag = 1;
+	for( int t = 0 ; t < n_threads ; t++ ) {
+		if( statflag[t] >= 0 ) { return 0; }
+	}
+	return flag;
+#endif
+}
+
+int pthreader::get_any_status_zero() 
+{ 
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ANY_ZERO
+	return any_status_pos; 
+#else
+	int flag = 0;
+	for( int t = 0 ; t < n_threads ; t++ ) {
+		if( statflag[t] == 0 ) { return 1; }
+	}
+	return flag;
+#endif
+}
+
+int pthreader::get_any_status_positive() 
+{ 
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ANY_POS
+	return any_status_pos; 
+#else
+	int flag = 0;
+	for( int t = 0 ; t < n_threads ; t++ ) {
+		if( statflag[t] > 0 ) { return 1; }
+	}
+	return flag;
+#endif
+}
+
+int pthreader::get_any_status_negative() 
+{ 
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ANY_NEG
+	return any_status_neg; 
+#else
+	int flag = 0;
+	for( int t = 0 ; t < n_threads ; t++ ) {
+		if( statflag[t] < 0 ) { return 1; }
+	}
+	return flag;
+#endif
+}
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * 
  * LAUNCH
  * 
  * setup and launch the actual threads
@@ -353,6 +449,26 @@ void pthreader::evaluate( void * in , void * out )
 		return;
 	}
 
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ALL_ZERO
+	all_status_zero = 1;
+#endif
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ALL_POS
+	all_status_pos  = 1;
+#endif
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ALL_NEG
+	all_status_neg  = 1;
+#endif
+	
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ANY_ZERO
+	any_status_zero = 0;
+#endif
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ANY_POS
+	any_status_pos  = 0;
+#endif
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ANY_NEG
+	any_status_neg  = 0;
+#endif
+
 	// loop through worker threads storing data object and signaling that work is available
 	for( t = 0 ; t < n_threads_minus_one ; t++ ) { 
 		pthread_mutex_lock( worklock + t );
@@ -371,6 +487,26 @@ void pthreader::evaluate( void * in , void * out )
 	// do work here, in this thread, too... using params constructed with setup fcn
 	statflag[0] = thread_eval( 0 , eval_params , in , out );
 
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ALL_ZERO
+	all_status_zero = ( statflag[0] == 0 ? all_status_zero : 0 );
+#endif
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ALL_POS
+	all_status_pos  = ( statflag[0]  > 0 ? all_status_pos : 0 );
+#endif
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ALL_NEG
+	all_status_neg  = ( statflag[0]  < 0 ? all_status_neg : 0 );
+#endif
+
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ANY_ZERO
+	any_status_zero = ( statflag[0] == 0 ? 1 : any_status_zero );
+#endif
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ANY_POS
+	any_status_pos  = ( statflag[0]  > 0 ? 1 : any_status_pos );
+#endif
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ANY_NEG
+	any_status_neg  = ( statflag[0]  < 0 ? 1 : any_status_neg );
+#endif
+
 	if( verbose ) {
 		pthread_mutex_lock( &prntlock );
 		printf( "thread %i is done evaluating.\n" , 1 );
@@ -383,6 +519,27 @@ void pthreader::evaluate( void * in , void * out )
 		if( workflag[t] == 1 ) { // if thread t is still working...
 			pthread_cond_wait( cv_free + t , worklock + t ); // wait for it to signal done
 		}
+
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ALL_ZERO
+		all_status_zero = ( statflag[t+1] == 0 ? all_status_zero : 0 );
+#endif
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ALL_POS
+		all_status_pos  = ( statflag[t+1]  > 0 ? all_status_pos : 0 );
+#endif
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ALL_NEG
+		all_status_neg  = ( statflag[t+1]  < 0 ? all_status_neg : 0 );
+#endif
+
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ANY_ZERO
+		any_status_zero = ( statflag[t+1] == 0 ? 1 : any_status_zero );
+#endif
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ANY_POS
+		any_status_pos  = ( statflag[t+1] >  0 ? 1 : any_status_pos );
+#endif
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ANY_NEG
+		any_status_neg  = ( statflag[t+1] <  0 ? 1 : any_status_neg );
+#endif
+
 		if( verbose ) {
 			pthread_mutex_lock( &prntlock );
 			printf( "thread %i knows thread %i is done evaluating.\n" , 1 , t+2 );

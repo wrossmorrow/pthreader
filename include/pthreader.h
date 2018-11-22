@@ -55,6 +55,23 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * 
+ * COMPILER FLAGS
+ * 
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+#define _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ALL_ZERO 1
+#define _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ANY_ZERO 1
+#define _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ALL_POS  1
+#define _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ANY_POS  1
+#define _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ALL_NEG  1
+#define _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ANY_NEG  1
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * 
  * 
  * 
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -141,6 +158,26 @@ private:
 
 	pthread_mutex_t prntlock; 	// for verbose
 
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ALL_ZERO
+	int all_status_zero;
+#endif
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ALL_POS
+	int all_status_pos;
+#endif
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ALL_NEG
+	int all_status_neg;
+#endif
+
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ANY_ZERO
+	int any_status_zero;
+#endif
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ANY_POS
+	int any_status_pos;
+#endif
+#ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ANY_NEG
+	int any_status_neg;
+#endif
+
 public:
 	
 	pthreader( int n_threads );
@@ -151,6 +188,16 @@ public:
 	void set_setup( pthreader_setup_fcn f );
 	void set_evaluate( pthreader_eval_fcn f );
 	void set_cleanup( pthreader_free_fcn f );
+
+	int get_eval_status( int n ); 	// get the status flag from evaluations
+
+	int get_all_status_zero();		// convenience routine
+	int get_all_status_positive();	// convenience routine
+	int get_all_status_negative();	// convenience routine
+
+	int get_any_status_zero();		// convenience routine
+	int get_any_status_positive();	// convenience routine
+	int get_any_status_negative();	// convenience routine
 
 	void launch();					// launch without data
 	void launch( void * data ); 	// launch with data

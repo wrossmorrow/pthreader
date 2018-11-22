@@ -156,7 +156,7 @@ int main( int argc , char * argv[] )
 		S = 0.0;
 		for( int t = 0 ; t < params.Nthrd ; t++ ) { S += s[t]; }
 		S /= ((double)(params.Nobsv));
-		printf( "evaluated, and obtained: %0.6f\n" , S );
+		printf( "evaluated, and obtained: %0.6f (any status positive? %s)\n" , S , ( PT->get_any_status_positive() ? "yes" : "no" ) );
 
 	}
 
