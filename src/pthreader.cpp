@@ -1,22 +1,38 @@
 
+#include <stdexcept>
+
 #include "pthreader.h"
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * 
- * EVALUATE
+ * GENERIC SETUP/EVALUATION/CLEANUP FUNCTIONS
  * 
- * do a multi-threaded evaluation
+ * need "no-op" placeholders as a default
  * 
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+using namespace std;
+
 // for default initialization of objects
 void * pthreader_setup_noop( int n , int N , void * data ) { return NULL; }
 int pthreader_eval_noop( int n , void * params , void * in , void * out ) { return 0; }
 void pthreader_close_noop( int n , void ** data ) {}
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * 
+ * THREAD WORKER FUNCTION
+ * 
+ * called as the "main" routine executed in any non-root thread
+ * 
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 // ** IMPORTANT ** (I think)
 // 
@@ -100,15 +116,21 @@ pthreader::pthreader( int n ) : n_threads(n)
 
 	if( n_threads <= 0 ) {
 		// throw some kind of error or "bad initialization" return
+		throw invalid_argument( "Number of threads must be two or more." );
+	}
+
+	if( n_threads == 1 ) {
+		// throw some kind of "pointless number of threads" return
+		throw invalid_argument( "Number of threads must be two or more." );
 	}
 
 	// we use this a bunch, so might as well just define it
 	n_threads_minus_one = n_threads - 1;
 
 	thread_alloc = pthreader_setup_noop;
-	thread_eval = pthreader_eval_noop;
-	thread_free = pthreader_close_noop;
-	eval_params = NULL;
+	thread_eval  = pthreader_eval_noop;
+	thread_free  = pthreader_close_noop;
+	eval_params  = NULL;
 
 	// allocate space for the thread parameter objects
 	thread_params = ( pthreader_params * )malloc( n_threads_minus_one * sizeof( pthreader_params ) );
@@ -360,9 +382,9 @@ void pthreader::launch( void * data )
 
 	// allocate the mutexes, condition variables, and thread data structures
 	worklock = ( pthread_mutex_t * )malloc( n_threads_minus_one * sizeof( pthread_mutex_t ) );
-	cv_work  = ( pthread_cond_t * )malloc( n_threads_minus_one * sizeof( pthread_cond_t ) );
-	cv_free  = ( pthread_cond_t * )malloc( n_threads_minus_one * sizeof( pthread_cond_t ) );
-	thread 	 = ( pthread_t * )malloc( n_threads_minus_one * sizeof( pthread_t ) );
+	cv_work  = ( pthread_cond_t  * )malloc( n_threads_minus_one * sizeof( pthread_cond_t  ) );
+	cv_free  = ( pthread_cond_t  * )malloc( n_threads_minus_one * sizeof( pthread_cond_t  ) );
+	thread 	 = ( pthread_t       * )malloc( n_threads_minus_one * sizeof( pthread_t       ) );
 
 	// for each thread we spawn, create a thread and call the generic "worker" routine
 	// this will, on launch, execute any setup routines specified
@@ -390,10 +412,10 @@ void pthreader::launch( void * data )
 
 	// we do this ourselves, here, too but don't need to set the pointers
 
-	// print if we should... how if we aren't storing params? 
+	// print if we should... 
 	if( verbose ) { 
 		pthread_mutex_lock( &prntlock );
-		printf( "launching thread %i / %i\n" , 1 , n_threads ); fflush( stdout );
+		printf( "launching thread %i / %i\n" , 1 , n_threads );
 		pthread_mutex_unlock( &prntlock );
 	}
 
@@ -491,20 +513,20 @@ void pthreader::evaluate( void * in , void * out )
 	all_status_zero = ( statflag[0] == 0 ? all_status_zero : 0 );
 #endif
 #ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ALL_POS
-	all_status_pos  = ( statflag[0]  > 0 ? all_status_pos : 0 );
+	all_status_pos  = ( statflag[0]  > 0 ? all_status_pos  : 0 );
 #endif
 #ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ALL_NEG
-	all_status_neg  = ( statflag[0]  < 0 ? all_status_neg : 0 );
+	all_status_neg  = ( statflag[0]  < 0 ? all_status_neg  : 0 );
 #endif
 
 #ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ANY_ZERO
 	any_status_zero = ( statflag[0] == 0 ? 1 : any_status_zero );
 #endif
 #ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ANY_POS
-	any_status_pos  = ( statflag[0]  > 0 ? 1 : any_status_pos );
+	any_status_pos  = ( statflag[0]  > 0 ? 1 : any_status_pos  );
 #endif
 #ifdef _PTHREADER_COMPILE_ACCUM_EVAL_STATUS_ANY_NEG
-	any_status_neg  = ( statflag[0]  < 0 ? 1 : any_status_neg );
+	any_status_neg  = ( statflag[0]  < 0 ? 1 : any_status_neg  );
 #endif
 
 	if( verbose ) {
@@ -515,6 +537,7 @@ void pthreader::evaluate( void * in , void * out )
 
 	// wait until evaluations complete
 	for( t = 0 ; t < n_threads_minus_one ; t++ ) {
+
 		pthread_mutex_lock( worklock + t );
 		if( workflag[t] == 1 ) { // if thread t is still working...
 			pthread_cond_wait( cv_free + t , worklock + t ); // wait for it to signal done
@@ -545,7 +568,9 @@ void pthreader::evaluate( void * in , void * out )
 			printf( "thread %i knows thread %i is done evaluating.\n" , 1 , t+2 );
 			pthread_mutex_unlock( &prntlock );
 		}
+
 		pthread_mutex_unlock( worklock + t );
+
 	}
 }
 
@@ -599,14 +624,14 @@ void pthreader::close( )
 		pthread_cond_destroy( cv_free + t );
 
 		// clear pointers in the thread_params objects
-		thread_params[t].workflag = NULL;
-		thread_params[t].worklock = NULL;
-		thread_params[t].cv_work  = NULL;
-		thread_params[t].cv_free  = NULL;
-		thread_params[t].init_data = NULL;
+		thread_params[t].workflag 	 = NULL;
+		thread_params[t].worklock 	 = NULL;
+		thread_params[t].cv_work  	 = NULL;
+		thread_params[t].cv_free  	 = NULL;
+		thread_params[t].init_data 	 = NULL;
 		thread_params[t].eval_params = NULL;
-		thread_params[t].eval_in = NULL;
-		thread_params[t].eval_out = NULL;
+		thread_params[t].eval_in 	 = NULL;
+		thread_params[t].eval_out 	 = NULL;
 
 	}
 
@@ -616,12 +641,13 @@ void pthreader::close( )
 	// free the status flags
 	free( statflag );
 
+	// free thread coordination stuff
 	free( worklock );
 	free( cv_work  );
 	free( cv_free  );
 	free( thread   );
 
-	// set the running flag
+	// set the running flag back to "no"
 	threads_open = 0;
 
 }
@@ -630,7 +656,11 @@ void pthreader::close( )
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * 
+ * Copyright 2018+, W. Ross Morrow, Stanford GSB Research Support Services
  * 
+ * https://code.stanford.edu/morrowwr/pthreader
+ *
+ * wrossmorrow@stanford.edu, morrowwr@gmail.com
  * 
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

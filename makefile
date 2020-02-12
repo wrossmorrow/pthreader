@@ -12,7 +12,11 @@ EXM_DIR := examples
 
 CPP 	:= g++
 
-CFLAGS 	:= -std=c++11 -xHost -O3 -prec-div -no-ftz -restrict -I$(INC_DIR)
+ifeq ($(CPP),icc)
+	CFLAGS 	:= -std=c++11 -xHost -O3 -prec-div -no-ftz -restrict -I$(INC_DIR)
+else 
+	CFLAGS 	:= -std=c++11 -I$(INC_DIR)
+endif
 
 LIBS 	:= -lpthread -lm
 
