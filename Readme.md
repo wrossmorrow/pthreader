@@ -6,7 +6,11 @@ Do you have a scientific computing application written in C++ that you want to r
 minimize f(x;p) with respect to x, given p
 ```
 
-where the objective `f` is nominally "hard" to calculate, but can be decomposed into some set of embarassingly parallel sub-calculations. 
+where the objective `f` is nominally "hard" to calculate, but can be decomposed into some set of embarassingly parallel sub-calculations. For example, minimizing loss functions in statistics: 
+
+```
+minimize 1/N \sum_{n=1}^N f(x;p_n) with respect to x, given p_n for all n
+```
 
 # Introduction
 
