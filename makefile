@@ -33,6 +33,11 @@ pthreader: env
 
 examples: env ols blr
 
+ball: env pthreader
+
+	$(CPP) $(CFLAGS) -c $(EXM_DIR)/pt_ball_sim.cpp -o $(OBJ_DIR)/pt_sim.o
+	$(CPP) -o $(EXE_DIR)/pt_sim $(OBJ_DIR)/pthreader.o $(OBJ_DIR)/pt_sim.o $(LIBS)
+
 ols: env pthreader
 
 	$(CPP) $(CFLAGS) -c $(EXM_DIR)/pt_ols.cpp -o $(OBJ_DIR)/pt_ols.o
