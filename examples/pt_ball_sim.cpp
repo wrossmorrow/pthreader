@@ -7,6 +7,45 @@
 
 #include "pthreader.h"
 
+// http://www.azillionmonkeys.com/qed/random.html
+
+#define RS_SCALE (1.0 / (1.0 + RAND_MAX))
+
+double drand (void) {
+    double d;
+    do {
+       d = (((rand () * RS_SCALE) + rand ()) * RS_SCALE + rand ()) * RS_SCALE;
+    } while (d >= 1); /* Round off */
+    return d;
+}
+
+#define irand(x) ((unsigned int) ((x) * drand ()))
+
+int randbiased (double x) {
+    for (;;) {
+        double p = rand () * RS_SCALE;
+        if (p >= x) return 0;
+        if (p+RS_SCALE <= x) return 1;
+        /* p < x < p+RS_SCALE */
+        x = (x - p) * (1.0 + RAND_MAX);
+    }
+}
+
+size_t randrange(size_t n) {
+    double xhi;
+    double resolution = n * RS_SCALE;
+    double x = resolution * rand (); /* x in [0,n) */
+    size_t lo = (size_t) floor (x);
+
+    xhi = x + resolution;
+
+    for (;;) {
+        lo++;
+        if (lo >= xhi || randbiased ((lo - x) / (xhi - x))) return lo-1;
+        x = lo;
+    }
+}
+
 double random_u( ) { return ((double)rand())/((double)RAND_MAX); }
 
 unsigned int randuint( int a , int b ) 
@@ -16,25 +55,26 @@ unsigned int randuint( int a , int b )
     return (unsigned int)( (double)(b-a) * random_u() + a );
 }
 
-double simulate( const int T , const int N , unsigned int * U )
+unsigned long int simulate( const int T , const int N , unsigned int * U )
 {
     int t, r, c;
     unsigned int B1 , B2;
-    double P = 0.0;
+    unsigned long int C = 0l;
 
     for( t = 0 ; t < T ; t++ ) {
         for( r = 0 ; r < N ; r++ )
             for( c = 0 ; c < N ; c++ )
-                U[N*r+c] = randuint(0,N);
-        B1 = randuint(0,N); B2 = randuint(0,N);
+                U[N*r+c] = (unsigned int)randrange(N);
+        B1 = (unsigned int)randrange(N);
+        B2 = (unsigned int)randrange(N);
         for( r = 0 ; r < N ; r++ ) {
-            B1 = U[N*r+B1]; B2 = U[N*r+B2];
+            B1 = U[N*r+B1];
+            B2 = U[N*r+B2];
         }
         if( B1 == B2 )
-            P += 1.0;
+            C += 1l;
     }
-    // P /= ((double)T);
-    return P;
+    return C;
 }
 
 typedef struct pt_sim_params {
@@ -58,7 +98,7 @@ void * pt_sim_setup( int n , int N , void * args )
 
     data->Nt = N;
     data->N  = params->N;
-    data->U  = ( unsigned int * )malloc( (params->N)*(params->N)*sizeof(unsigned int) );
+    data->U  = ( unsigned int * )malloc( (params->N)*(params->N) * sizeof(unsigned int) );
 
     // "touch" memory allocated to page it
     for( i = 0 ; i < (params->N)*(params->N) ; i++ )
@@ -82,7 +122,7 @@ int pt_sim_evaluation( int n , void * data , void * in , void * out )
 
     pt_sim_data * d = ( pt_sim_data * )data;
     int Tt = *(( int * )in);
-    double * P = ( double * )out;
+    unsigned long int * C = ( unsigned long int * )out;
 
     // Remainder and block size, from thread number and number of threads
     // make sure we split evenly by spreading remainder over threads
@@ -90,20 +130,16 @@ int pt_sim_evaluation( int n , void * data , void * in , void * out )
     B = ( Tt - R ) / ( d->Nt );
     T = B + ( n < R ? 1 : 0 );
 
-
-    // simulate
-    P[n] = simulate( T , d->N , d->U );
-    // printf( "(%i) evaluate: Ttotal = %i, T = %i, P = %0.4f\n" , n , Tt, T, P[n]/((double)T) );
+    // simulate, storing result in output array location for this thread
+    C[n] = simulate( T , d->N , d->U );
 
     return 0;
 }
 
-double aggregate( const int N , const int T , const double * x )
+unsigned long int sum( const int N , const unsigned long int * x )
 {
-    double y = 0.0; 
-    for( int n = 0 ; n < N ; n++ ) 
-        y += x[n];
-    y /= (double)T;
+    unsigned long int y = 0l; 
+    for( int n = 0 ; n < N ; n++ ) y += x[n];
     return y;
 }
 
@@ -135,31 +171,35 @@ int main( int argc , char * argv[] )
     PT->be_quiet();
 
     double P, Pp, F;
-    double * Pt = ( double * )malloc( params.Nt * sizeof(double) );
+    unsigned long int * C = ( unsigned long int * )malloc( params.Nt * sizeof(unsigned long int) );
     int T = params.T0;
     int N = params.N;
+    double Td = (double)T;
+    double Nd = (double)N;
 
-    PT->evaluate( (void*)(&T) , (void*)Pt );
-    P = aggregate( N , T , Pt );
+    PT->evaluate( (void*)(&T) , (void*)C );
+    P = ((double)sum( params.Nt , C )) / ((double)T);
     Pp = 1.0 - P; // ensure condition fails
 
+    double I = 0.0, Q;
     while( fabs( Pp - P ) > 1.0e-5 ) {
         printf( "+ current probability: %0.4f\n" , P );
-        printf( "+ doubling T: %i -> %i\n" , T , 2*T );
-        T = 2*T; Pp = P;
-        PT->evaluate( (void*)(&T) , (void*)Pt );
-        P = aggregate( N , T , Pt );
+        printf( "+       current count: %i\n" , (int)(I*T+T) );
+        Pp = P; I += 1.0;
+        PT->evaluate( (void*)(&T) , (void*)C );
+        Q = ((double)sum( params.Nt , C )) / Td;
+        P = ( (1.0-1.0/I) * P + 1.0/I * Q );
     }
 
     printf( "probability the same: %0.4f\n" , P );
 
-    F = 1.0 - pow( 1.0 - 1.0/((double)N) , (double)N );
+    F = 1.0 - pow( 1.0 - 1.0/Nd , Nd );
     printf( "   prithvi's formula: %0.4f\n" , F );
 
-    F = 1.0 - ((double)(N-1))/((double)N) * pow( ((double)(N*N-N+1))/((double)(N*N)) , (double)N-1.0 );
+    F = 1.0 - (Nd-1.0)/Nd * pow( (Nd*Nd-Nd+1.0)/(Nd*Nd) , Nd-1.0 );
     printf( "       ross' formula: %0.4f\n" , F );
 
-    free( Pt );
+    free( C );
 
     // close the threads
     PT->close( );
