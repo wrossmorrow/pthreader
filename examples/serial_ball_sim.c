@@ -48,10 +48,7 @@ unsigned int randrange( unsigned int n )
 
 double random_u( ) { return ((double)rand())/((double)RAND_MAX); }
 
-unsigned int randuint( int b ) 
-{
-    return (unsigned int)( (double)b * random_u() );
-}
+unsigned int randuint( int b ) { return (unsigned int)( (double)b * random_u() ); }
 
 unsigned int simulate( const int T , const int N , unsigned int * U )
 {
