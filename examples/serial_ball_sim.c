@@ -7,7 +7,7 @@
 
 #define RS_SCALE ( 1.0 / ( 1.0 + RAND_MAX ) )
 
-double drand(void) 
+double drand( ) 
 {
     double d;
     do {
@@ -29,7 +29,7 @@ int randbiased( double x )
     }
 }
 
-unsigned int randrange( unsigned int n ) 
+unsigned int randrange( const unsigned int n ) 
 {
     double xhi , resolution = n * RS_SCALE;
     double x = resolution * rand(); /* x in [0,n) */
@@ -48,9 +48,9 @@ unsigned int randrange( unsigned int n )
 
 double random_u( ) { return ((double)rand())/((double)RAND_MAX); }
 
-unsigned int randuint( int b ) { return (unsigned int)( (double)b * random_u() ); }
+unsigned int randuint( const int b ) { return (unsigned int)( (double)b * random_u() ); }
 
-unsigned int simulate( const int T , const int N , unsigned int * U )
+unsigned int simulate( const int T , const int N , unsigned int *__restrict__ U )
 {
     int t, r, c;
     unsigned int B1 , B2;
@@ -94,6 +94,8 @@ int main( int argc , char * argv[] )
     printf( "probability the same: %0.6f\n" , P );
     F = 1.0 - pow( 1.0-1.0/Nd , Nd );
     printf( "   prithvi's formula: %0.6f\n" , F );
+    // F = 1.0 - (2.0*Nd-1.0)/(Nd*Nd);
+    // printf( "       ali's formula: %0.6f\n" , F );
     F = 1.0 - (Nd-1.0)/Nd * pow( (Nd*Nd-N+1.0)/(Nd*Nd) , Nd-1.0 );
     printf( "       ross' formula: %0.6f\n" , F );
 
